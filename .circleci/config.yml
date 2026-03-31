@@ -22,6 +22,23 @@ commands:
           name: Install uv
           command: curl -LsSf https://astral.sh/uv/install.sh | sh && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
 
+  restore-uv-cache:
+    description: Restore uv dependency cache (mirrors GHA setup-uv enable-cache)
+    steps:
+      - restore_cache:
+          keys:
+            - uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-deps-{{ checksum "pyproject.toml" }}-
+            - uv-deps-
+
+  save-uv-cache:
+    description: Save uv dependency cache
+    steps:
+      - save_cache:
+          key: uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+
   setup-venv:
     description: Create virtual environment and install dependencies
     steps:
@@ -30,6 +47,7 @@ commands:
           command: |
             uv venv .venv
             echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
+      - restore-uv-cache
       - run:
           name: "[TIMING] STEP_START_INSTALL"
           command: echo "STEP_START_INSTALL $(date +%s%N)"
@@ -41,6 +59,7 @@ commands:
       - run:
           name: "[TIMING] STEP_DONE_INSTALL"
           command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+      - save-uv-cache
 
 jobs:
   # -----------------------------------------------------------------------
@@ -64,6 +83,7 @@ jobs:
           command: |
             uv venv .venv
             echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
+      - restore-uv-cache
       - run:
           name: "[TIMING] STEP_START_INSTALL"
           command: echo "STEP_START_INSTALL $(date +%s%N)"
@@ -73,6 +93,7 @@ jobs:
       - run:
           name: "[TIMING] STEP_DONE_INSTALL"
           command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+      - save-uv-cache
       - run:
           name: Ruff Check
           command: |
@@ -172,6 +193,11 @@ jobs:
           command: |
             uv venv .venv --python python3.11
             echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
+      - restore_cache:
+          keys:
+            - uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-deps-{{ checksum "pyproject.toml" }}-
+            - uv-deps-
       - run:
           name: "[TIMING] STEP_START_INSTALL"
           command: echo "STEP_START_INSTALL $(date +%s%N)"
@@ -183,6 +209,13 @@ jobs:
       - run:
           name: "[TIMING] STEP_DONE_INSTALL"
           command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+      - save_cache:
+          key: uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - restore_cache:
+          keys:
+            - ollama-llama3.2-3b-v1
       - run:
           name: Start Ollama service
           command: |
@@ -193,8 +226,13 @@ jobs:
               ollama/ollama:latest
             timeout 60 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
       - run:
-          name: Pull LLM model
-          command: docker exec ollama ollama pull llama3.2:3b
+          name: Pull LLM model (skipped if cached)
+          command: |
+            if [ ! -d ollama-data/models ]; then
+              docker exec ollama ollama pull llama3.2:3b
+            else
+              echo "Model already cached, skipping pull"
+            fi
           no_output_timeout: 10m
       - run:
           name: "[TIMING] STEP_START_TEST"
@@ -208,6 +246,14 @@ jobs:
       - run:
           name: "[TIMING] STEP_DONE_TEST"
           command: echo "STEP_DONE_TEST $(date +%s%N)"
+      - run:
+          name: Fix permissions for cache
+          command: sudo chown -R $USER:$USER ollama-data || true
+          when: always
+      - save_cache:
+          key: ollama-llama3.2-3b-v1
+          paths:
+            - ollama-data
       - run:
           name: Stop Ollama service
           command: docker stop ollama && docker rm ollama
@@ -237,6 +283,7 @@ jobs:
           command: |
             uv venv .venv
             echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
+      - restore-uv-cache
       - run:
           name: "[TIMING] STEP_START_INSTALL"
           command: echo "STEP_START_INSTALL $(date +%s%N)"
@@ -246,6 +293,7 @@ jobs:
       - run:
           name: "[TIMING] STEP_DONE_INSTALL"
           command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+      - save-uv-cache
       - run:
           name: Build
           command: uv run -p .venv python -m build
