@@ -2,7 +2,7 @@ version: 2.1
 
 # ---------------------------------------------------------------------------
 # Mirror of .github/workflows/run_tests.yml for CircleCI
-# Includes timing instrumentation and hyperfine-wrapped pytest runs.
+# Includes timing instrumentation for benchmarking.
 # ---------------------------------------------------------------------------
 
 executors:
@@ -21,15 +21,6 @@ commands:
       - run:
           name: Install uv
           command: curl -LsSf https://astral.sh/uv/install.sh | sh && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-
-  install-hyperfine:
-    description: Install hyperfine benchmarking tool
-    steps:
-      - run:
-          name: Install hyperfine
-          command: |
-            wget -qO /tmp/hyperfine.deb https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine_1.18.0_amd64.deb
-            sudo dpkg -i /tmp/hyperfine.deb
 
   setup-venv:
     description: Create virtual environment and install dependencies
@@ -128,13 +119,12 @@ jobs:
       - run:
           name: Ruff check
           command: ruff check --fix-only
-      - install-hyperfine
       - run:
           name: "[TIMING] STEP_START_TEST"
           command: echo "STEP_START_TEST $(date +%s%N)"
       - run:
-          name: Run tests with pytest (hyperfine x3)
-          command: hyperfine --runs 3 'uv run -p .venv pytest -vv tests/'
+          name: Run tests with pytest
+          command: uv run -p .venv pytest -vv tests/
           no_output_timeout: 30m
       - run:
           name: "[TIMING] STEP_DONE_TEST"
@@ -146,8 +136,8 @@ jobs:
           name: "[TIMING] STEP_START_EXTRA_TEST"
           command: echo "STEP_START_EXTRA_TEST $(date +%s%N)"
       - run:
-          name: Run extra and deno tests (hyperfine x3)
-          command: hyperfine --runs 3 "uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno"
+          name: Run extra and deno tests
+          command: uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno
           no_output_timeout: 30m
       - run:
           name: "[TIMING] STEP_DONE_EXTRA_TEST"
@@ -207,18 +197,13 @@ jobs:
           command: docker exec ollama ollama pull llama3.2:3b
           no_output_timeout: 10m
       - run:
-          name: Install hyperfine
-          command: |
-            wget -qO /tmp/hyperfine.deb https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine_1.18.0_amd64.deb
-            sudo dpkg -i /tmp/hyperfine.deb
-      - run:
           name: "[TIMING] STEP_START_TEST"
           command: echo "STEP_START_TEST $(date +%s%N)"
       - run:
-          name: Run LLM tests (hyperfine x3)
+          name: Run LLM tests
           command: |
             export LM_FOR_TEST=ollama/llama3.2:3b
-            hyperfine --runs 3 'uv run -p .venv pytest -m llm_call --llm_call -vv --durations=5 tests/'
+            uv run -p .venv pytest -m llm_call --llm_call -vv --durations=5 tests/
           no_output_timeout: 30m
       - run:
           name: "[TIMING] STEP_DONE_TEST"
