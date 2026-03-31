@@ -117,7 +117,7 @@ jobs:
       - run:
           name: Install Deno
           command: |
-            curl -fsSL https://deno.land/install.sh | sh -s -- --yes -r v2.7.7
+            curl -fsSL https://deno.land/install.sh | sh -s v2.7.7
             echo 'export DENO_INSTALL="$HOME/.deno"' >> "$BASH_ENV"
             echo 'export PATH="$HOME/.deno/bin:$PATH"' >> "$BASH_ENV"
       - run:
