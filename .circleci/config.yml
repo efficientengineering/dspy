@@ -12,7 +12,7 @@ executors:
         type: string
     docker:
       - image: cimg/python:<< parameters.python-version >>
-    resource_class: large
+    resource_class: medium+
 
 commands:
   install-uv:
@@ -170,7 +170,7 @@ jobs:
   llm-call-test:
     machine:
       image: ubuntu-2404:current
-    resource_class: large
+    resource_class: medium
     steps:
       - run:
           name: "[TIMING] JOB_START_LLM_TEST"
