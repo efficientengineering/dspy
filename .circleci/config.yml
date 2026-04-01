@@ -12,7 +12,7 @@ executors:
         type: string
     docker:
       - image: cimg/python:<< parameters.python-version >>
-    resource_class: medium+
+    resource_class: large
 
 commands:
   install-uv:
