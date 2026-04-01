@@ -226,13 +226,8 @@ jobs:
               ollama/ollama:latest
             timeout 60 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
       - run:
-          name: Pull LLM model (skipped if cached)
-          command: |
-            if [ ! -d ollama-data/models ]; then
-              docker exec ollama ollama pull llama3.2:3b
-            else
-              echo "Model already cached, skipping pull"
-            fi
+          name: Pull LLM model
+          command: docker exec ollama ollama pull llama3.2:3b
           no_output_timeout: 10m
       - run:
           name: "[TIMING] STEP_START_TEST"
