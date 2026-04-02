@@ -2,9 +2,9 @@ version: 2.1
 
 jobs:
   fix:
-    docker:
-      - image: cimg/python:3.11
-    resource_class: medium
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium.gen2
     steps:
       - run:
           name: Job Start
@@ -18,6 +18,9 @@ jobs:
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Install Python 3.11
+          command: uv python install 3.11
       - restore_cache:
           keys:
             - uv-cache-fix-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
@@ -28,7 +31,7 @@ jobs:
       - run:
           name: Create and activate virtual environment
           command: |
-            uv venv .venv
+            uv venv .venv --python 3.11
             echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
       - run:
           name: Install dependencies
@@ -64,9 +67,9 @@ jobs:
     parameters:
       python-version:
         type: string
-    docker:
-      - image: cimg/python:<< parameters.python-version >>
-    resource_class: medium
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium.gen2
     steps:
       - run:
           name: Job Start
@@ -89,6 +92,9 @@ jobs:
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Install Python
+          command: uv python install << parameters.python-version >>
       - restore_cache:
           keys:
             - uv-cache-test-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
@@ -99,7 +105,7 @@ jobs:
       - run:
           name: Create and activate virtual environment
           command: |
-            uv venv .venv
+            uv venv .venv --python << parameters.python-version >>
             echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
       - run:
           name: Install dependencies
@@ -219,9 +225,9 @@ jobs:
     parameters:
       python-version:
         type: string
-    docker:
-      - image: cimg/python:<< parameters.python-version >>
-    resource_class: medium
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium.gen2
     steps:
       - run:
           name: Job Start
@@ -235,6 +241,9 @@ jobs:
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Install Python
+          command: uv python install << parameters.python-version >>
       - restore_cache:
           keys:
             - uv-cache-build-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
@@ -245,7 +254,7 @@ jobs:
       - run:
           name: Create and activate virtual environment
           command: |
-            uv venv .venv
+            uv venv .venv --python << parameters.python-version >>
             echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
       - run:
           name: Install dependencies
