@@ -4,7 +4,7 @@ jobs:
   fix:
     docker:
       - image: cimg/python:3.11
-    resource_class: medium.gen2
+    resource_class: medium
     steps:
       - run:
           name: Job Start
@@ -66,7 +66,7 @@ jobs:
         type: string
     docker:
       - image: cimg/python:<< parameters.python-version >>
-    resource_class: medium.gen2
+    resource_class: medium
     steps:
       - run:
           name: Job Start
@@ -221,7 +221,7 @@ jobs:
         type: string
     docker:
       - image: cimg/python:<< parameters.python-version >>
-    resource_class: medium.gen2
+    resource_class: medium
     steps:
       - run:
           name: Job Start
