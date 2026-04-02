@@ -1,130 +1,79 @@
 version: 2.1
 
-# ---------------------------------------------------------------------------
-# Mirror of .github/workflows/run_tests.yml for CircleCI
-# Includes timing instrumentation for benchmarking.
-# ---------------------------------------------------------------------------
-
-executors:
-  python-executor:
-    parameters:
-      python-version:
-        type: string
-    docker:
-      - image: cimg/python:<< parameters.python-version >>
-    resource_class: large
-
-commands:
-  install-uv:
-    description: Install uv package manager
-    steps:
-      - run:
-          name: Install uv
-          command: curl -LsSf https://astral.sh/uv/install.sh | sh && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-
-  restore-uv-cache:
-    description: Restore uv dependency cache (mirrors GHA setup-uv enable-cache)
-    steps:
-      - restore_cache:
-          keys:
-            - uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
-            - uv-deps-{{ checksum "pyproject.toml" }}-
-            - uv-deps-
-
-  save-uv-cache:
-    description: Save uv dependency cache
-    steps:
-      - save_cache:
-          key: uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
-          paths:
-            - ~/.cache/uv
-
-  setup-venv:
-    description: Create virtual environment and install dependencies
-    steps:
-      - run:
-          name: Create virtual environment
-          command: |
-            uv venv .venv
-            echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
-      - restore-uv-cache
-      - run:
-          name: "[TIMING] STEP_START_INSTALL"
-          command: echo "STEP_START_INSTALL $(date +%s%N)"
-      - run:
-          name: Install dependencies
-          command: |
-            uv sync --dev -p .venv --extra dev
-            uv pip list
-      - run:
-          name: "[TIMING] STEP_DONE_INSTALL"
-          command: echo "STEP_DONE_INSTALL $(date +%s%N)"
-      - save-uv-cache
-
 jobs:
-  # -----------------------------------------------------------------------
-  # Job 1: Ruff lint check (mirrors GHA "fix" job)
-  # -----------------------------------------------------------------------
-  ruff-check:
-    executor:
-      name: python-executor
-      python-version: "3.11"
+  fix:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: medium
     steps:
       - run:
-          name: "[TIMING] JOB_START_FIX"
+          name: Job Start
           command: echo "JOB_START_FIX $(date +%s%N)"
       - checkout
       - run:
-          name: "[TIMING] STEP_DONE_CHECKOUT"
+          name: Checkout Done
           command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
-      - install-uv
       - run:
-          name: Create virtual environment
+          name: Install uv
+          command: |
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - restore_cache:
+          keys:
+            - uv-cache-fix-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-fix-
+      - run:
+          name: Start Install
+          command: echo "STEP_START_INSTALL $(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
           command: |
             uv venv .venv
-            echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
-      - restore-uv-cache
-      - run:
-          name: "[TIMING] STEP_START_INSTALL"
-          command: echo "STEP_START_INSTALL $(date +%s%N)"
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
       - run:
           name: Install dependencies
           command: uv sync --dev -p .venv --extra dev
       - run:
-          name: "[TIMING] STEP_DONE_INSTALL"
+          name: Install Done
           command: echo "STEP_DONE_INSTALL $(date +%s%N)"
-      - save-uv-cache
+      - save_cache:
+          key: uv-cache-fix-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST $(date +%s%N)"
       - run:
           name: Ruff Check
           command: |
             ruff check --fix-only --diff --exit-non-zero-on-fix || (
               echo ""
-              echo "Ruff found issues that can be fixed automatically."
-              echo "To fix them locally, run:"
+              echo "\u274c Ruff found issues that can be fixed automatically."
+              echo "\ud83d\udca1 To fix them locally, run:"
               echo ""
               echo "    pre-commit run --all-files"
               echo ""
               echo "Then commit and push the changes."
               exit 1
             )
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST $(date +%s%N)"
 
-  # -----------------------------------------------------------------------
-  # Job 2: Main test suite (mirrors GHA "test" job)
-  # -----------------------------------------------------------------------
   test:
     parameters:
       python-version:
         type: string
-    executor:
-      name: python-executor
-      python-version: << parameters.python-version >>
+    docker:
+      - image: cimg/python:<< parameters.python-version >>
+    resource_class: medium
     steps:
       - run:
-          name: "[TIMING] JOB_START_TEST"
-          command: echo "JOB_START_TEST $(date +%s%N)"
+          name: Job Start
+          command: echo "JOB_START_TEST_<< parameters.python-version >> $(date +%s%N)"
       - checkout
       - run:
-          name: "[TIMING] STEP_DONE_CHECKOUT"
+          name: Checkout Done
           command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
       - run:
           name: Install Deno
@@ -135,82 +84,96 @@ jobs:
       - run:
           name: Verify Deno installation
           command: deno --version
-      - install-uv
-      - setup-venv
-      - run:
-          name: Ruff check
-          command: ruff check --fix-only
-      - run:
-          name: "[TIMING] STEP_START_TEST"
-          command: echo "STEP_START_TEST $(date +%s%N)"
-      - run:
-          name: Run tests with pytest
-          command: uv run -p .venv pytest -vv tests/
-          no_output_timeout: 30m
-      - run:
-          name: "[TIMING] STEP_DONE_TEST"
-          command: echo "STEP_DONE_TEST $(date +%s%N)"
-      - run:
-          name: Install optional dependencies
-          command: uv sync -p .venv --extra dev --extra test_extras
-      - run:
-          name: "[TIMING] STEP_START_EXTRA_TEST"
-          command: echo "STEP_START_EXTRA_TEST $(date +%s%N)"
-      - run:
-          name: Run extra and deno tests
-          command: uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno
-          no_output_timeout: 30m
-      - run:
-          name: "[TIMING] STEP_DONE_EXTRA_TEST"
-          command: echo "STEP_DONE_EXTRA_TEST $(date +%s%N)"
-
-  # -----------------------------------------------------------------------
-  # Job 3: LLM call tests with Ollama (mirrors GHA "llm_call_test" job)
-  # -----------------------------------------------------------------------
-  llm-call-test:
-    machine:
-      image: ubuntu-2404:current
-    resource_class: medium
-    steps:
-      - run:
-          name: "[TIMING] JOB_START_LLM_TEST"
-          command: echo "JOB_START_LLM_TEST $(date +%s%N)"
-      - checkout
-      - run:
-          name: "[TIMING] STEP_DONE_CHECKOUT"
-          command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
-      - run:
-          name: Setup Python 3.11
-          command: |
-            sudo add-apt-repository -y ppa:deadsnakes/ppa
-            sudo apt-get update
-            sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
       - run:
           name: Install uv
-          command: curl -LsSf https://astral.sh/uv/install.sh | sh && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-      - run:
-          name: Create virtual environment
           command: |
-            uv venv .venv --python python3.11
-            echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
       - restore_cache:
           keys:
-            - uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
-            - uv-deps-{{ checksum "pyproject.toml" }}-
-            - uv-deps-
+            - uv-cache-test-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-test-<< parameters.python-version >>-
       - run:
-          name: "[TIMING] STEP_START_INSTALL"
+          name: Start Install
           command: echo "STEP_START_INSTALL $(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
+          command: |
+            uv venv .venv
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
       - run:
           name: Install dependencies
           command: |
             uv sync --dev -p .venv --extra dev
             uv pip list
       - run:
-          name: "[TIMING] STEP_DONE_INSTALL"
+          name: Install Done
           command: echo "STEP_DONE_INSTALL $(date +%s%N)"
       - save_cache:
-          key: uv-deps-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          key: uv-cache-test-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST $(date +%s%N)"
+      - run:
+          name: Run lint with ruff
+          command: ruff check --fix-only
+      - run:
+          name: Run tests with pytest
+          command: uv run -p .venv pytest -vv tests/
+      - run:
+          name: Install optional dependencies
+          command: uv sync -p .venv --extra dev --extra test_extras
+      - run:
+          name: Run extra and deno tests
+          command: uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST $(date +%s%N)"
+
+  llm_call_test:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+    steps:
+      - run:
+          name: Job Start
+          command: echo "JOB_START_LLM_CALL_TEST $(date +%s%N)"
+      - checkout
+      - run:
+          name: Checkout Done
+          command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
+      - run:
+          name: Install uv
+          command: |
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Install Python 3.11
+          command: uv python install 3.11
+      - restore_cache:
+          keys:
+            - uv-cache-llm-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-llm-
+      - run:
+          name: Start Install
+          command: echo "STEP_START_INSTALL $(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
+          command: |
+            uv venv .venv --python 3.11
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
+      - run:
+          name: Install dependencies
+          command: |
+            uv sync --dev -p .venv --extra dev
+            uv pip list
+      - run:
+          name: Install Done
+          command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+      - save_cache:
+          key: uv-cache-llm-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
           paths:
             - ~/.cache/uv
       - restore_cache:
@@ -222,73 +185,81 @@ jobs:
             mkdir -p ollama-data
             docker run -d --name ollama \
               -p 11434:11434 \
-              -v "$(pwd)/ollama-data:/root/.ollama" \
+              -v $(pwd)/ollama-data:/root/.ollama \
               ollama/ollama:latest
             timeout 60 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
       - run:
-          name: Pull LLM model
+          name: Pull LLM
           command: docker exec ollama ollama pull llama3.2:3b
-          no_output_timeout: 10m
-      - run:
-          name: "[TIMING] STEP_START_TEST"
-          command: echo "STEP_START_TEST $(date +%s%N)"
-      - run:
-          name: Run LLM tests
-          command: |
-            export LM_FOR_TEST=ollama/llama3.2:3b
-            uv run -p .venv pytest -m llm_call --llm_call -vv --durations=5 tests/
-          no_output_timeout: 30m
-      - run:
-          name: "[TIMING] STEP_DONE_TEST"
-          command: echo "STEP_DONE_TEST $(date +%s%N)"
       - run:
           name: Fix permissions for cache
           command: sudo chown -R $USER:$USER ollama-data || true
-          when: always
       - save_cache:
           key: ollama-llama3.2-3b-v1
           paths:
             - ollama-data
       - run:
+          name: Set LM environment variable
+          command: echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST $(date +%s%N)"
+      - run:
+          name: Run tests
+          command: uv run -p .venv pytest -m llm_call --llm_call -vv --durations=5 tests/
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST $(date +%s%N)"
+      - run:
           name: Stop Ollama service
           command: docker stop ollama && docker rm ollama
           when: always
 
-  # -----------------------------------------------------------------------
-  # Job 4: Build package (mirrors GHA "build_package" job)
-  # -----------------------------------------------------------------------
-  build-package:
+  build_package:
     parameters:
       python-version:
         type: string
-    executor:
-      name: python-executor
-      python-version: << parameters.python-version >>
+    docker:
+      - image: cimg/python:<< parameters.python-version >>
+    resource_class: medium
     steps:
       - run:
-          name: "[TIMING] JOB_START_BUILD"
-          command: echo "JOB_START_BUILD $(date +%s%N)"
+          name: Job Start
+          command: echo "JOB_START_BUILD_PACKAGE_<< parameters.python-version >> $(date +%s%N)"
       - checkout
       - run:
-          name: "[TIMING] STEP_DONE_CHECKOUT"
+          name: Checkout Done
           command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
-      - install-uv
       - run:
-          name: Create virtual environment
+          name: Install uv
+          command: |
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - restore_cache:
+          keys:
+            - uv-cache-build-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-build-<< parameters.python-version >>-
+      - run:
+          name: Start Install
+          command: echo "STEP_START_INSTALL $(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
           command: |
             uv venv .venv
-            echo 'export PATH="$(pwd)/.venv/bin:$PATH"' >> "$BASH_ENV"
-      - restore-uv-cache
-      - run:
-          name: "[TIMING] STEP_START_INSTALL"
-          command: echo "STEP_START_INSTALL $(date +%s%N)"
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
       - run:
           name: Install dependencies
           command: uv sync --dev -p .venv --extra dev
       - run:
-          name: "[TIMING] STEP_DONE_INSTALL"
+          name: Install Done
           command: echo "STEP_DONE_INSTALL $(date +%s%N)"
-      - save-uv-cache
+      - save_cache:
+          key: uv-cache-build-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST $(date +%s%N)"
       - run:
           name: Build
           command: uv run -p .venv python -m build
@@ -298,17 +269,20 @@ jobs:
       - run:
           name: Test import dspy
           command: uv run -p .venv python -c "import dspy"
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST $(date +%s%N)"
 
 workflows:
   lint-test-build:
     jobs:
-      - ruff-check
+      - fix
       - test:
           matrix:
             parameters:
               python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-      - llm-call-test
-      - build-package:
+      - llm_call_test
+      - build_package:
           matrix:
             parameters:
               python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
