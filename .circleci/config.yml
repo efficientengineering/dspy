@@ -4,7 +4,7 @@ jobs:
   fix:
     machine:
       image: ubuntu-2204:current
-    resource_class: medium.gen2
+    resource_class: large.gen2
     steps:
       - run:
           name: Job Start
@@ -69,7 +69,7 @@ jobs:
         type: string
     machine:
       image: ubuntu-2204:current
-    resource_class: medium.gen2
+    resource_class: large.gen2
     steps:
       - run:
           name: Job Start
@@ -141,7 +141,7 @@ jobs:
   llm_call_test:
     machine:
       image: ubuntu-2204:current
-    resource_class: medium.gen2
+    resource_class: large.gen2
     steps:
       - run:
           name: Job Start
@@ -227,7 +227,7 @@ jobs:
         type: string
     machine:
       image: ubuntu-2204:current
-    resource_class: medium.gen2
+    resource_class: large.gen2
     steps:
       - run:
           name: Job Start
@@ -285,7 +285,7 @@ jobs:
   sysbench:
     machine:
       image: ubuntu-2204:current
-    resource_class: medium.gen2
+    resource_class: large.gen2
     steps:
       - run:
           name: Job Start
