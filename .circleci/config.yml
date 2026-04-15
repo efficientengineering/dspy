@@ -1,3 +1,4 @@
+# Benchmark run triggered 2026-04-15T00:00:00Z
 version: 2.1
 
 jobs:
@@ -8,11 +9,11 @@ jobs:
     steps:
       - run:
           name: Job Start
-          command: echo "JOB_START_FIX $(date +%s%N)"
+          command: echo "JOB_START_FIX=$(date +%s%N)"
       - checkout
       - run:
           name: Checkout Done
-          command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
       - run:
           name: Install uv
           command: |
@@ -27,7 +28,7 @@ jobs:
             - uv-cache-fix-
       - run:
           name: Start Install
-          command: echo "STEP_START_INSTALL $(date +%s%N)"
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
       - run:
           name: Create and activate virtual environment
           command: |
@@ -38,14 +39,14 @@ jobs:
           command: uv sync --dev -p .venv --extra dev
       - run:
           name: Install Done
-          command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
       - save_cache:
           key: uv-cache-fix-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
           paths:
             - ~/.cache/uv
       - run:
           name: Start Test
-          command: echo "STEP_START_TEST $(date +%s%N)"
+          command: echo "STEP_START_TEST=$(date +%s%N)"
       - run:
           name: Ruff Check
           command: |
@@ -61,7 +62,7 @@ jobs:
             )
       - run:
           name: Test Done
-          command: echo "STEP_DONE_TEST $(date +%s%N)"
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
 
   test:
     parameters:
@@ -73,11 +74,11 @@ jobs:
     steps:
       - run:
           name: Job Start
-          command: echo "JOB_START_TEST_<< parameters.python-version >> $(date +%s%N)"
+          command: echo "JOB_START_TEST_<< parameters.python-version >>=$(date +%s%N)"
       - checkout
       - run:
           name: Checkout Done
-          command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
       - run:
           name: Install Deno
           command: |
@@ -101,7 +102,7 @@ jobs:
             - uv-cache-test-<< parameters.python-version >>-
       - run:
           name: Start Install
-          command: echo "STEP_START_INSTALL $(date +%s%N)"
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
       - run:
           name: Create and activate virtual environment
           command: |
@@ -114,14 +115,14 @@ jobs:
             uv pip list
       - run:
           name: Install Done
-          command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
       - save_cache:
           key: uv-cache-test-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
           paths:
             - ~/.cache/uv
       - run:
           name: Start Test
-          command: echo "STEP_START_TEST $(date +%s%N)"
+          command: echo "STEP_START_TEST=$(date +%s%N)"
       - run:
           name: Run lint with ruff
           command: ruff check --fix-only
@@ -136,7 +137,7 @@ jobs:
           command: uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno
       - run:
           name: Test Done
-          command: echo "STEP_DONE_TEST $(date +%s%N)"
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
 
   llm_call_test:
     machine:
@@ -145,11 +146,11 @@ jobs:
     steps:
       - run:
           name: Job Start
-          command: echo "JOB_START_LLM_CALL_TEST $(date +%s%N)"
+          command: echo "JOB_START_LLM_CALL_TEST=$(date +%s%N)"
       - checkout
       - run:
           name: Checkout Done
-          command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
       - run:
           name: Install uv
           command: |
@@ -164,7 +165,7 @@ jobs:
             - uv-cache-llm-
       - run:
           name: Start Install
-          command: echo "STEP_START_INSTALL $(date +%s%N)"
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
       - run:
           name: Create and activate virtual environment
           command: |
@@ -177,7 +178,7 @@ jobs:
             uv pip list
       - run:
           name: Install Done
-          command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
       - save_cache:
           key: uv-cache-llm-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
           paths:
@@ -209,13 +210,13 @@ jobs:
           command: echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
       - run:
           name: Start Test
-          command: echo "STEP_START_TEST $(date +%s%N)"
+          command: echo "STEP_START_TEST=$(date +%s%N)"
       - run:
           name: Run tests
           command: uv run -p .venv pytest -m llm_call --llm_call -vv --durations=5 tests/
       - run:
           name: Test Done
-          command: echo "STEP_DONE_TEST $(date +%s%N)"
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
       - run:
           name: Stop Ollama service
           command: docker stop ollama && docker rm ollama
@@ -231,11 +232,11 @@ jobs:
     steps:
       - run:
           name: Job Start
-          command: echo "JOB_START_BUILD_PACKAGE_<< parameters.python-version >> $(date +%s%N)"
+          command: echo "JOB_START_BUILD_PACKAGE_<< parameters.python-version >>=$(date +%s%N)"
       - checkout
       - run:
           name: Checkout Done
-          command: echo "STEP_DONE_CHECKOUT $(date +%s%N)"
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
       - run:
           name: Install uv
           command: |
@@ -250,7 +251,7 @@ jobs:
             - uv-cache-build-<< parameters.python-version >>-
       - run:
           name: Start Install
-          command: echo "STEP_START_INSTALL $(date +%s%N)"
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
       - run:
           name: Create and activate virtual environment
           command: |
@@ -261,14 +262,14 @@ jobs:
           command: uv sync --dev -p .venv --extra dev
       - run:
           name: Install Done
-          command: echo "STEP_DONE_INSTALL $(date +%s%N)"
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
       - save_cache:
           key: uv-cache-build-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
           paths:
             - ~/.cache/uv
       - run:
           name: Start Test
-          command: echo "STEP_START_TEST $(date +%s%N)"
+          command: echo "STEP_START_TEST=$(date +%s%N)"
       - run:
           name: Build
           command: uv run -p .venv python -m build
@@ -280,7 +281,7 @@ jobs:
           command: uv run -p .venv python -c "import dspy"
       - run:
           name: Test Done
-          command: echo "STEP_DONE_TEST $(date +%s%N)"
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
 
   sysbench:
     machine:
@@ -289,7 +290,7 @@ jobs:
     steps:
       - run:
           name: Job Start
-          command: echo "JOB_START_SYSBENCH $(date +%s%N)"
+          command: echo "JOB_START_SYSBENCH=$(date +%s%N)"
       - run:
           name: Install sysbench
           command: sudo apt-get update && sudo apt-get install -y sysbench
@@ -307,48 +308,48 @@ jobs:
       - run:
           name: CPU Benchmark
           command: |
-            echo "BENCH_START_CPU $(date +%s%N)"
+            echo "BENCH_START_CPU=$(date +%s%N)"
             sysbench cpu --cpu-max-prime=20000 --threads=2 --time=30 run
-            echo "BENCH_DONE_CPU $(date +%s%N)"
+            echo "BENCH_DONE_CPU=$(date +%s%N)"
       - run:
           name: Memory Write Benchmark
           command: |
-            echo "BENCH_START_MEM_WRITE $(date +%s%N)"
+            echo "BENCH_START_MEM_WRITE=$(date +%s%N)"
             sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=write --threads=2 --time=30 run
-            echo "BENCH_DONE_MEM_WRITE $(date +%s%N)"
+            echo "BENCH_DONE_MEM_WRITE=$(date +%s%N)"
       - run:
           name: Memory Read Benchmark
           command: |
-            echo "BENCH_START_MEM_READ $(date +%s%N)"
+            echo "BENCH_START_MEM_READ=$(date +%s%N)"
             sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=read --threads=2 --time=30 run
-            echo "BENCH_DONE_MEM_READ $(date +%s%N)"
+            echo "BENCH_DONE_MEM_READ=$(date +%s%N)"
       - run:
           name: File IO Sequential Write
           command: |
-            echo "BENCH_START_FILEIO_SEQWR $(date +%s%N)"
+            echo "BENCH_START_FILEIO_SEQWR=$(date +%s%N)"
             sysbench fileio --file-total-size=1G --file-num=4 prepare
             sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqwr --threads=2 --time=30 run
             sysbench fileio --file-total-size=1G --file-num=4 cleanup
-            echo "BENCH_DONE_FILEIO_SEQWR $(date +%s%N)"
+            echo "BENCH_DONE_FILEIO_SEQWR=$(date +%s%N)"
       - run:
           name: File IO Sequential Read
           command: |
-            echo "BENCH_START_FILEIO_SEQRD $(date +%s%N)"
+            echo "BENCH_START_FILEIO_SEQRD=$(date +%s%N)"
             sysbench fileio --file-total-size=1G --file-num=4 prepare
             sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqrd --threads=2 --time=30 run
             sysbench fileio --file-total-size=1G --file-num=4 cleanup
-            echo "BENCH_DONE_FILEIO_SEQRD $(date +%s%N)"
+            echo "BENCH_DONE_FILEIO_SEQRD=$(date +%s%N)"
       - run:
           name: File IO Random Read/Write
           command: |
-            echo "BENCH_START_FILEIO_RNDRW $(date +%s%N)"
+            echo "BENCH_START_FILEIO_RNDRW=$(date +%s%N)"
             sysbench fileio --file-total-size=1G --file-num=4 prepare
             sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=rndrw --threads=2 --time=30 run
             sysbench fileio --file-total-size=1G --file-num=4 cleanup
-            echo "BENCH_DONE_FILEIO_RNDRW $(date +%s%N)"
+            echo "BENCH_DONE_FILEIO_RNDRW=$(date +%s%N)"
       - run:
           name: Job Done
-          command: echo "JOB_DONE_SYSBENCH $(date +%s%N)"
+          command: echo "JOB_DONE_SYSBENCH=$(date +%s%N)"
 
 workflows:
   lint-test-build:
