@@ -138,6 +138,7 @@ jobs:
       - image: cimg/python:3.11
         environment:
           OLLAMA_HOST: http://ollama:11434
+          OLLAMA_API_BASE: http://ollama:11434
       - image: ollama/ollama:latest
         name: ollama
     resource_class: large
@@ -194,6 +195,7 @@ jobs:
           command: |
             echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
             echo 'export OLLAMA_HOST="http://ollama:11434"' >> "$BASH_ENV"
+            echo 'export OLLAMA_API_BASE="http://ollama:11434"' >> "$BASH_ENV"
       - run:
           name: Start Test
           command: echo "STEP_START_TEST=$(date +%s%N)"
