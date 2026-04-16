@@ -136,6 +136,8 @@ jobs:
   llm_call_test:
     docker:
       - image: cimg/python:3.11
+        environment:
+          OLLAMA_HOST: http://ollama:11434
       - image: ollama/ollama:latest
         name: ollama
     resource_class: large
@@ -179,17 +181,19 @@ jobs:
       - run:
           name: Wait for Ollama service
           command: |
-            timeout 60 bash -c 'until curl -sf http://localhost:11434/api/version; do sleep 2; done'
+            timeout 60 bash -c 'until curl -sf http://ollama:11434/api/version; do sleep 2; done'
             echo "Ollama is ready"
       - run:
           name: Pull LLM
           command: |
-            curl -sf -X POST http://localhost:11434/api/pull \
+            curl -sf -X POST http://ollama:11434/api/pull \
               -d '{"name": "llama3.2:3b"}' | tail -1
             echo "Model pull complete"
       - run:
           name: Set LM environment variable
-          command: echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
+          command: |
+            echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
+            echo 'export OLLAMA_HOST="http://ollama:11434"' >> "$BASH_ENV"
       - run:
           name: Start Test
           command: echo "STEP_START_TEST=$(date +%s%N)"
