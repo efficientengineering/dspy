@@ -1,4 +1,4 @@
-# Benchmark: self-hosted machine runner (efficientengineering/hetzner-benchmarker) — run 4
+# Benchmark: self-hosted machine runner (efficientengineering/hetzner-benchmarker) — concurrent: 6
 version: 2.1
 
 jobs:
