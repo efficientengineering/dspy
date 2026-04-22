@@ -1,10 +1,10 @@
-# Benchmark run: Machine large Gen1 (4 vCPU, 15 GB) — 2026-04-21
+# Benchmark: docker large Gen1 (4 CPU, 8 GB, $0.012/min)
 version: 2.1
 
 jobs:
   fix:
-    machine:
-      image: ubuntu-2204:current
+    docker:
+      - image: cimg/python:3.11
     resource_class: large
     steps:
       - run:
@@ -19,9 +19,6 @@ jobs:
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-      - run:
-          name: Install Python 3.11
-          command: uv python install 3.11
       - restore_cache:
           keys:
             - uv-cache-fix-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
@@ -68,8 +65,8 @@ jobs:
     parameters:
       python-version:
         type: string
-    machine:
-      image: ubuntu-2204:current
+    docker:
+      - image: cimg/python:<< parameters.python-version >>
     resource_class: large
     steps:
       - run:
@@ -93,9 +90,6 @@ jobs:
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-      - run:
-          name: Install Python
-          command: uv python install << parameters.python-version >>
       - restore_cache:
           keys:
             - uv-cache-test-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
@@ -140,8 +134,13 @@ jobs:
           command: echo "STEP_DONE_TEST=$(date +%s%N)"
 
   llm_call_test:
-    machine:
-      image: ubuntu-2204:current
+    docker:
+      - image: cimg/python:3.11
+        environment:
+          OLLAMA_HOST: http://ollama:11434
+          OLLAMA_API_BASE: http://ollama:11434
+      - image: ollama/ollama:latest
+        name: ollama
     resource_class: large
     steps:
       - run:
@@ -156,9 +155,6 @@ jobs:
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-      - run:
-          name: Install Python 3.11
-          command: uv python install 3.11
       - restore_cache:
           keys:
             - uv-cache-llm-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
@@ -183,31 +179,23 @@ jobs:
           key: uv-cache-llm-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
           paths:
             - ~/.cache/uv
-      - restore_cache:
-          keys:
-            - ollama-llama3.2-3b-v1
       - run:
-          name: Start Ollama service
+          name: Wait for Ollama service
           command: |
-            mkdir -p ollama-data
-            docker run -d --name ollama \
-              -p 11434:11434 \
-              -v $(pwd)/ollama-data:/root/.ollama \
-              ollama/ollama:latest
-            timeout 60 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
+            timeout 60 bash -c 'until curl -sf http://ollama:11434/api/version; do sleep 2; done'
+            echo "Ollama is ready"
       - run:
           name: Pull LLM
-          command: docker exec ollama ollama pull llama3.2:3b
-      - run:
-          name: Fix permissions for cache
-          command: sudo chown -R $USER:$USER ollama-data || true
-      - save_cache:
-          key: ollama-llama3.2-3b-v1
-          paths:
-            - ollama-data
+          command: |
+            curl -sf -X POST http://ollama:11434/api/pull \
+              -d '{"name": "llama3.2:3b"}' | tail -1
+            echo "Model pull complete"
       - run:
           name: Set LM environment variable
-          command: echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
+          command: |
+            echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
+            echo 'export OLLAMA_HOST="http://ollama:11434"' >> "$BASH_ENV"
+            echo 'export OLLAMA_API_BASE="http://ollama:11434"' >> "$BASH_ENV"
       - run:
           name: Start Test
           command: echo "STEP_START_TEST=$(date +%s%N)"
@@ -217,17 +205,13 @@ jobs:
       - run:
           name: Test Done
           command: echo "STEP_DONE_TEST=$(date +%s%N)"
-      - run:
-          name: Stop Ollama service
-          command: docker stop ollama && docker rm ollama
-          when: always
 
   build_package:
     parameters:
       python-version:
         type: string
-    machine:
-      image: ubuntu-2204:current
+    docker:
+      - image: cimg/python:<< parameters.python-version >>
     resource_class: large
     steps:
       - run:
@@ -242,9 +226,6 @@ jobs:
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
-      - run:
-          name: Install Python
-          command: uv python install << parameters.python-version >>
       - restore_cache:
           keys:
             - uv-cache-build-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
@@ -284,8 +265,8 @@ jobs:
           command: echo "STEP_DONE_TEST=$(date +%s%N)"
 
   sysbench:
-    machine:
-      image: ubuntu-2204:current
+    docker:
+      - image: cimg/base:current
     resource_class: large
     steps:
       - run:
