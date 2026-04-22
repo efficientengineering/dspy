@@ -86,7 +86,7 @@ jobs:
         run: uv sync -p .venv --extra dev --extra test_extras
       - name: Run extra and deno tests
         run: uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno
-  
+
   llm_call_test:
     name: Run Tests with Real LM
     runs-on: ubuntu-latest
@@ -168,3 +168,60 @@ jobs:
         run: uv pip install dist/*.whl -p .venv
       - name: Test import dspy
         run: uv run -p .venv python -c "import dspy"
+
+  sysbench:
+    name: Sysbench Platform Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Job Start
+        run: echo "JOB_START_SYSBENCH $(date +%s%N)"
+      - name: Install sysbench
+        run: sudo apt-get update && sudo apt-get install -y sysbench
+      - name: System Info
+        run: |
+          echo "=== CPU ==="
+          lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core|Socket|MHz'
+          echo "=== Memory ==="
+          free -h
+          echo "=== Disk ==="
+          df -h .
+          echo "=== Kernel ==="
+          uname -r
+      - name: CPU Benchmark
+        run: |
+          echo "BENCH_START_CPU $(date +%s%N)"
+          sysbench cpu --cpu-max-prime=20000 --threads=2 --time=30 run
+          echo "BENCH_DONE_CPU $(date +%s%N)"
+      - name: Memory Write Benchmark
+        run: |
+          echo "BENCH_START_MEM_WRITE $(date +%s%N)"
+          sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=write --threads=2 --time=30 run
+          echo "BENCH_DONE_MEM_WRITE $(date +%s%N)"
+      - name: Memory Read Benchmark
+        run: |
+          echo "BENCH_START_MEM_READ $(date +%s%N)"
+          sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=read --threads=2 --time=30 run
+          echo "BENCH_DONE_MEM_READ $(date +%s%N)"
+      - name: File IO Sequential Write
+        run: |
+          echo "BENCH_START_FILEIO_SEQWR $(date +%s%N)"
+          sysbench fileio --file-total-size=1G --file-num=4 prepare
+          sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqwr --threads=2 --time=30 run
+          sysbench fileio --file-total-size=1G --file-num=4 cleanup
+          echo "BENCH_DONE_FILEIO_SEQWR $(date +%s%N)"
+      - name: File IO Sequential Read
+        run: |
+          echo "BENCH_START_FILEIO_SEQRD $(date +%s%N)"
+          sysbench fileio --file-total-size=1G --file-num=4 prepare
+          sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqrd --threads=2 --time=30 run
+          sysbench fileio --file-total-size=1G --file-num=4 cleanup
+          echo "BENCH_DONE_FILEIO_SEQRD $(date +%s%N)"
+      - name: File IO Random Read/Write
+        run: |
+          echo "BENCH_START_FILEIO_RNDRW $(date +%s%N)"
+          sysbench fileio --file-total-size=1G --file-num=4 prepare
+          sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=rndrw --threads=2 --time=30 run
+          sysbench fileio --file-total-size=1G --file-num=4 cleanup
+          echo "BENCH_DONE_FILEIO_RNDRW $(date +%s%N)"
+      - name: Job Done
+        run: echo "JOB_DONE_SYSBENCH $(date +%s%N)"

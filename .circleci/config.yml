@@ -1,0 +1,348 @@
+# Benchmark: self-hosted container runner (efficientengineering/hetzner-benchmarker)
+version: 2.1
+
+jobs:
+  fix:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: efficientengineering/hetzner-benchmarker
+    steps:
+      - run:
+          name: Job Start
+          command: echo "JOB_START_FIX=$(date +%s%N)"
+      - checkout
+      - run:
+          name: Checkout Done
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
+      - run:
+          name: Install uv
+          command: |
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - restore_cache:
+          keys:
+            - uv-cache-fix-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-fix-
+      - run:
+          name: Start Install
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
+          command: |
+            uv venv .venv --python 3.11
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
+      - run:
+          name: Install dependencies
+          command: uv sync --dev -p .venv --extra dev
+      - run:
+          name: Install Done
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
+      - save_cache:
+          key: uv-cache-fix-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST=$(date +%s%N)"
+      - run:
+          name: Ruff Check
+          command: |
+            ruff check --fix-only --diff --exit-non-zero-on-fix || (
+              echo ""
+              echo "\u274c Ruff found issues that can be fixed automatically."
+              echo "\ud83d\udca1 To fix them locally, run:"
+              echo ""
+              echo "    pre-commit run --all-files"
+              echo ""
+              echo "Then commit and push the changes."
+              exit 1
+            )
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
+
+  test:
+    parameters:
+      python-version:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.python-version >>
+    resource_class: efficientengineering/hetzner-benchmarker
+    steps:
+      - run:
+          name: Job Start
+          command: echo "JOB_START_TEST_<< parameters.python-version >>=$(date +%s%N)"
+      - checkout
+      - run:
+          name: Checkout Done
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
+      - run:
+          name: Install Deno
+          command: |
+            curl -fsSL https://deno.land/install.sh | sh -s v2.7.7
+            echo 'export DENO_INSTALL="$HOME/.deno"' >> "$BASH_ENV"
+            echo 'export PATH="$HOME/.deno/bin:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Verify Deno installation
+          command: deno --version
+      - run:
+          name: Install uv
+          command: |
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - restore_cache:
+          keys:
+            - uv-cache-test-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-test-<< parameters.python-version >>-
+      - run:
+          name: Start Install
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
+          command: |
+            uv venv .venv --python << parameters.python-version >>
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
+      - run:
+          name: Install dependencies
+          command: |
+            uv sync --dev -p .venv --extra dev
+            uv pip list
+      - run:
+          name: Install Done
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
+      - save_cache:
+          key: uv-cache-test-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST=$(date +%s%N)"
+      - run:
+          name: Run lint with ruff
+          command: ruff check --fix-only
+      - run:
+          name: Run tests with pytest
+          command: uv run -p .venv pytest -vv tests/
+      - run:
+          name: Install optional dependencies
+          command: uv sync -p .venv --extra dev --extra test_extras
+      - run:
+          name: Run extra and deno tests
+          command: uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
+
+  llm_call_test:
+    docker:
+      - image: cimg/python:3.11
+        environment:
+          OLLAMA_HOST: http://ollama:11434
+          OLLAMA_API_BASE: http://ollama:11434
+      - image: ollama/ollama:latest
+        name: ollama
+    resource_class: efficientengineering/hetzner-benchmarker
+    steps:
+      - run:
+          name: Job Start
+          command: echo "JOB_START_LLM_CALL_TEST=$(date +%s%N)"
+      - checkout
+      - run:
+          name: Checkout Done
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
+      - run:
+          name: Install uv
+          command: |
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - restore_cache:
+          keys:
+            - uv-cache-llm-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-llm-
+      - run:
+          name: Start Install
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
+          command: |
+            uv venv .venv --python 3.11
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
+      - run:
+          name: Install dependencies
+          command: |
+            uv sync --dev -p .venv --extra dev
+            uv pip list
+      - run:
+          name: Install Done
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
+      - save_cache:
+          key: uv-cache-llm-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - run:
+          name: Wait for Ollama service
+          command: |
+            timeout 60 bash -c 'until curl -sf http://ollama:11434/api/version; do sleep 2; done'
+            echo "Ollama is ready"
+      - run:
+          name: Pull LLM
+          command: |
+            curl -sf -X POST http://ollama:11434/api/pull \
+              -d '{"name": "llama3.2:3b"}' | tail -1
+            echo "Model pull complete"
+      - run:
+          name: Set LM environment variable
+          command: |
+            echo 'export LM_FOR_TEST="ollama/llama3.2:3b"' >> "$BASH_ENV"
+            echo 'export OLLAMA_HOST="http://ollama:11434"' >> "$BASH_ENV"
+            echo 'export OLLAMA_API_BASE="http://ollama:11434"' >> "$BASH_ENV"
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST=$(date +%s%N)"
+      - run:
+          name: Run tests
+          command: uv run -p .venv pytest -m llm_call --llm_call -vv --durations=5 tests/
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
+
+  build_package:
+    parameters:
+      python-version:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.python-version >>
+    resource_class: efficientengineering/hetzner-benchmarker
+    steps:
+      - run:
+          name: Job Start
+          command: echo "JOB_START_BUILD_PACKAGE_<< parameters.python-version >>=$(date +%s%N)"
+      - checkout
+      - run:
+          name: Checkout Done
+          command: echo "STEP_DONE_CHECKOUT=$(date +%s%N)"
+      - run:
+          name: Install uv
+          command: |
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+      - restore_cache:
+          keys:
+            - uv-cache-build-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+            - uv-cache-build-<< parameters.python-version >>-
+      - run:
+          name: Start Install
+          command: echo "STEP_START_INSTALL=$(date +%s%N)"
+      - run:
+          name: Create and activate virtual environment
+          command: |
+            uv venv .venv --python << parameters.python-version >>
+            echo "export PATH=\"$(pwd)/.venv/bin:\$PATH\"" >> "$BASH_ENV"
+      - run:
+          name: Install dependencies
+          command: uv sync --dev -p .venv --extra dev
+      - run:
+          name: Install Done
+          command: echo "STEP_DONE_INSTALL=$(date +%s%N)"
+      - save_cache:
+          key: uv-cache-build-<< parameters.python-version >>-{{ checksum "pyproject.toml" }}-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
+      - run:
+          name: Start Test
+          command: echo "STEP_START_TEST=$(date +%s%N)"
+      - run:
+          name: Build
+          command: uv run -p .venv python -m build
+      - run:
+          name: Install built package
+          command: uv pip install dist/*.whl -p .venv
+      - run:
+          name: Test import dspy
+          command: uv run -p .venv python -c "import dspy"
+      - run:
+          name: Test Done
+          command: echo "STEP_DONE_TEST=$(date +%s%N)"
+
+  sysbench:
+    docker:
+      - image: cimg/base:current
+    resource_class: efficientengineering/hetzner-benchmarker
+    steps:
+      - run:
+          name: Job Start
+          command: echo "JOB_START_SYSBENCH=$(date +%s%N)"
+      - run:
+          name: Install sysbench
+          command: sudo apt-get update && sudo apt-get install -y sysbench
+      - run:
+          name: System Info
+          command: |
+            echo "=== CPU ==="
+            lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core|Socket|MHz'
+            echo "=== Memory ==="
+            free -h
+            echo "=== Disk ==="
+            df -h .
+            echo "=== Kernel ==="
+            uname -r
+      - run:
+          name: CPU Benchmark
+          command: |
+            echo "BENCH_START_CPU=$(date +%s%N)"
+            sysbench cpu --cpu-max-prime=20000 --threads=2 --time=30 run
+            echo "BENCH_DONE_CPU=$(date +%s%N)"
+      - run:
+          name: Memory Write Benchmark
+          command: |
+            echo "BENCH_START_MEM_WRITE=$(date +%s%N)"
+            sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=write --threads=2 --time=30 run
+            echo "BENCH_DONE_MEM_WRITE=$(date +%s%N)"
+      - run:
+          name: Memory Read Benchmark
+          command: |
+            echo "BENCH_START_MEM_READ=$(date +%s%N)"
+            sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=read --threads=2 --time=30 run
+            echo "BENCH_DONE_MEM_READ=$(date +%s%N)"
+      - run:
+          name: File IO Sequential Write
+          command: |
+            echo "BENCH_START_FILEIO_SEQWR=$(date +%s%N)"
+            sysbench fileio --file-total-size=1G --file-num=4 prepare
+            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqwr --threads=2 --time=30 run
+            sysbench fileio --file-total-size=1G --file-num=4 cleanup
+            echo "BENCH_DONE_FILEIO_SEQWR=$(date +%s%N)"
+      - run:
+          name: File IO Sequential Read
+          command: |
+            echo "BENCH_START_FILEIO_SEQRD=$(date +%s%N)"
+            sysbench fileio --file-total-size=1G --file-num=4 prepare
+            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqrd --threads=2 --time=30 run
+            sysbench fileio --file-total-size=1G --file-num=4 cleanup
+            echo "BENCH_DONE_FILEIO_SEQRD=$(date +%s%N)"
+      - run:
+          name: File IO Random Read/Write
+          command: |
+            echo "BENCH_START_FILEIO_RNDRW=$(date +%s%N)"
+            sysbench fileio --file-total-size=1G --file-num=4 prepare
+            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=rndrw --threads=2 --time=30 run
+            sysbench fileio --file-total-size=1G --file-num=4 cleanup
+            echo "BENCH_DONE_FILEIO_RNDRW=$(date +%s%N)"
+      - run:
+          name: Job Done
+          command: echo "JOB_DONE_SYSBENCH=$(date +%s%N)"
+
+workflows:
+  lint-test-build:
+    jobs:
+      - fix
+      - test:
+          matrix:
+            parameters:
+              python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      - llm_call_test
+      - build_package:
+          matrix:
+            parameters:
+              python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      - sysbench
