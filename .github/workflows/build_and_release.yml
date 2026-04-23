@@ -6,7 +6,7 @@ on:
       - "*"
 jobs:
   extract-tag:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       version: ${{ steps.extract_tag.outputs.tag }}
     steps:
@@ -17,7 +17,7 @@ jobs:
 
   build-and-publish-test-pypi:
     needs: extract-tag
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     environment:
       name: pypi
     permissions:
@@ -72,7 +72,7 @@ jobs:
     needs: [extract-tag, build-and-publish-test-pypi]
     # Only publish to PyPI if the repository owner is stanfordnlp
     if: github.repository_owner == 'stanfordnlp'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     environment:
       name: pypi
     permissions:
