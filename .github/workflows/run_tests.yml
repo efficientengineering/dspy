@@ -176,7 +176,7 @@ jobs:
       - name: Job Start
         run: echo "JOB_START_SYSBENCH $(date +%s%N)"
       - name: Install sysbench
-        run: sudo apt-get update && sudo apt-get install -y sysbench
+        run: sudo apt-get update && sudo apt-get install -y sysbench bc
       - name: System Info
         run: |
           echo "=== CPU ==="
@@ -187,6 +187,33 @@ jobs:
           df -h .
           echo "=== Kernel ==="
           uname -r
+      - name: Per-Core CPU Frequency
+        run: |
+          echo "=== Idle per-core MHz (/proc/cpuinfo) ==="
+          grep "^cpu MHz" /proc/cpuinfo | nl -ba
+          echo "=== lscpu range ==="
+          lscpu | grep -iE 'MHz|min|max' || true
+          echo "=== cpufreq sysfs (if guest exposes it) ==="
+          if ls /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq >/dev/null 2>&1; then
+            for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq; do
+              printf '%s = %s kHz\n' "$f" "$(cat "$f")"
+            done
+          else
+            echo "cpufreq sysfs not exposed (typical in cloud VMs/containers)"
+          fi
+          echo "=== Per-core MHz UNDER LOAD (bc pi on all $(nproc) cores, ~8s) ==="
+          for i in $(seq 1 "$(nproc)"); do
+            timeout 8 bash -c 'while :; do echo "scale=5000; 4*a(1)" | bc -l >/dev/null; done' &
+          done
+          for s in $(seq 1 6); do
+            echo "--- sample $s ($(date +%T)) ---"
+            grep "^cpu MHz" /proc/cpuinfo | nl -ba
+            sleep 1
+          done
+          wait
+          echo "=== turbostat (best-effort; needs MSR access) ==="
+          sudo turbostat --quiet --show Core,CPU,Bzy_MHz,Avg_MHz sleep 1 2>/dev/null \
+            || echo "turbostat unavailable (not installed or MSR blocked)"
       - name: CPU Benchmark
         run: |
           echo "BENCH_START_CPU $(date +%s%N)"
