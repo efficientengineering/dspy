@@ -318,26 +318,26 @@ jobs:
           name: CPU Benchmark
           command: |
             echo "BENCH_START_CPU=$(date +%s%N)"
-            sysbench cpu --cpu-max-prime=20000 --threads=2 --time=30 run
+            sysbench cpu --cpu-max-prime=20000 --threads=4 --time=30 run
             echo "BENCH_DONE_CPU=$(date +%s%N)"
       - run:
           name: Memory Write Benchmark
           command: |
             echo "BENCH_START_MEM_WRITE=$(date +%s%N)"
-            sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=write --threads=2 --time=30 run
+            sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=write --threads=4 --time=30 run
             echo "BENCH_DONE_MEM_WRITE=$(date +%s%N)"
       - run:
           name: Memory Read Benchmark
           command: |
             echo "BENCH_START_MEM_READ=$(date +%s%N)"
-            sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=read --threads=2 --time=30 run
+            sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=read --threads=4 --time=30 run
             echo "BENCH_DONE_MEM_READ=$(date +%s%N)"
       - run:
           name: File IO Sequential Write
           command: |
             echo "BENCH_START_FILEIO_SEQWR=$(date +%s%N)"
             sysbench fileio --file-total-size=1G --file-num=4 prepare
-            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqwr --threads=2 --time=30 run
+            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqwr --threads=4 --time=30 run
             sysbench fileio --file-total-size=1G --file-num=4 cleanup
             echo "BENCH_DONE_FILEIO_SEQWR=$(date +%s%N)"
       - run:
@@ -345,7 +345,7 @@ jobs:
           command: |
             echo "BENCH_START_FILEIO_SEQRD=$(date +%s%N)"
             sysbench fileio --file-total-size=1G --file-num=4 prepare
-            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqrd --threads=2 --time=30 run
+            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqrd --threads=4 --time=30 run
             sysbench fileio --file-total-size=1G --file-num=4 cleanup
             echo "BENCH_DONE_FILEIO_SEQRD=$(date +%s%N)"
       - run:
@@ -353,7 +353,7 @@ jobs:
           command: |
             echo "BENCH_START_FILEIO_RNDRW=$(date +%s%N)"
             sysbench fileio --file-total-size=1G --file-num=4 prepare
-            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=rndrw --threads=2 --time=30 run
+            sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=rndrw --threads=4 --time=30 run
             sysbench fileio --file-total-size=1G --file-num=4 cleanup
             echo "BENCH_DONE_FILEIO_RNDRW=$(date +%s%N)"
       - run:
