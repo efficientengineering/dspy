@@ -122,7 +122,7 @@ jobs:
           docker run -d --name ollama \
             -p 11434:11434 \
             -v ${{ github.workspace }}/ollama-data:/root/.ollama \
-            ollama/ollama:latest
+            ollama/ollama:0.21.1
           timeout 60 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
       - name: Pull LLM
         if: steps.cache-ollama.outputs.cache-hit != 'true'

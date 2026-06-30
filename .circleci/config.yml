@@ -139,7 +139,7 @@ jobs:
         environment:
           OLLAMA_HOST: http://ollama:11434
           OLLAMA_API_BASE: http://ollama:11434
-      - image: ollama/ollama:latest
+      - image: ollama/ollama:0.21.1
         name: ollama
     resource_class: large.gen2
     steps:
