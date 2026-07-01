@@ -10,7 +10,7 @@ on:
 jobs:
   fix:
     name: Check Ruff Fix
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
     steps:
@@ -46,7 +46,7 @@ jobs:
 
   test:
     name: Run Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -86,10 +86,10 @@ jobs:
         run: uv sync -p .venv --extra dev --extra test_extras
       - name: Run extra and deno tests
         run: uv run -p .venv pytest tests/ -m 'extra or deno' --extra --deno
-  
+
   llm_call_test:
     name: Run Tests with Real LM
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -122,7 +122,7 @@ jobs:
           docker run -d --name ollama \
             -p 11434:11434 \
             -v ${{ github.workspace }}/ollama-data:/root/.ollama \
-            ollama/ollama:latest
+            ollama/ollama:0.21.1
           timeout 60 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
       - name: Pull LLM
         if: steps.cache-ollama.outputs.cache-hit != 'true'
@@ -140,7 +140,7 @@ jobs:
 
   build_package:
     name: Build Package
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -168,3 +168,87 @@ jobs:
         run: uv pip install dist/*.whl -p .venv
       - name: Test import dspy
         run: uv run -p .venv python -c "import dspy"
+
+  sysbench:
+    name: Sysbench Platform Benchmark
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - name: Job Start
+        run: echo "JOB_START_SYSBENCH $(date +%s%N)"
+      - name: Install sysbench
+        run: sudo apt-get update && sudo apt-get install -y sysbench bc
+      - name: System Info
+        run: |
+          echo "=== CPU (full lscpu) ==="
+          lscpu
+          echo "=== Memory ==="
+          free -h
+          echo "=== Disk ==="
+          df -h .
+          echo "=== Kernel ==="
+          uname -r
+      - name: Per-Core CPU Frequency
+        run: |
+          echo "=== Idle per-core MHz (/proc/cpuinfo) ==="
+          grep "^cpu MHz" /proc/cpuinfo | nl -ba
+          echo "=== lscpu range ==="
+          lscpu | grep -iE 'MHz|min|max' || true
+          echo "=== cpufreq sysfs (if guest exposes it) ==="
+          if ls /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq >/dev/null 2>&1; then
+            for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq; do
+              printf '%s = %s kHz\n' "$f" "$(cat "$f")"
+            done
+          else
+            echo "cpufreq sysfs not exposed (typical in cloud VMs/containers)"
+          fi
+          echo "=== Per-core MHz UNDER LOAD (bc pi on all $(nproc) cores, ~8s) ==="
+          for i in $(seq 1 "$(nproc)"); do
+            timeout 8 bash -c 'while :; do echo "scale=5000; 4*a(1)" | bc -l >/dev/null; done' &
+          done
+          for s in $(seq 1 6); do
+            echo "--- sample $s ($(date +%T)) ---"
+            grep "^cpu MHz" /proc/cpuinfo | nl -ba
+            sleep 1
+          done
+          wait
+          echo "=== turbostat (best-effort; needs MSR access) ==="
+          sudo turbostat --quiet --show Core,CPU,Bzy_MHz,Avg_MHz sleep 1 2>/dev/null \
+            || echo "turbostat unavailable (not installed or MSR blocked)"
+      - name: CPU Benchmark
+        run: |
+          echo "BENCH_START_CPU $(date +%s%N)"
+          sysbench cpu --cpu-max-prime=20000 --threads=6 --time=30 run
+          echo "BENCH_DONE_CPU $(date +%s%N)"
+      - name: Memory Write Benchmark
+        run: |
+          echo "BENCH_START_MEM_WRITE $(date +%s%N)"
+          sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=write --threads=6 --time=30 run
+          echo "BENCH_DONE_MEM_WRITE $(date +%s%N)"
+      - name: Memory Read Benchmark
+        run: |
+          echo "BENCH_START_MEM_READ $(date +%s%N)"
+          sysbench memory --memory-block-size=1K --memory-total-size=10G --memory-oper=read --threads=6 --time=30 run
+          echo "BENCH_DONE_MEM_READ $(date +%s%N)"
+      - name: File IO Sequential Write
+        run: |
+          echo "BENCH_START_FILEIO_SEQWR $(date +%s%N)"
+          sysbench fileio --file-total-size=1G --file-num=4 prepare
+          sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqwr --threads=6 --time=30 run
+          sysbench fileio --file-total-size=1G --file-num=4 cleanup
+          echo "BENCH_DONE_FILEIO_SEQWR $(date +%s%N)"
+      - name: File IO Sequential Read
+        run: |
+          echo "BENCH_START_FILEIO_SEQRD $(date +%s%N)"
+          sysbench fileio --file-total-size=1G --file-num=4 prepare
+          sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=seqrd --threads=6 --time=30 run
+          sysbench fileio --file-total-size=1G --file-num=4 cleanup
+          echo "BENCH_DONE_FILEIO_SEQRD $(date +%s%N)"
+      - name: File IO Random Read/Write
+        run: |
+          echo "BENCH_START_FILEIO_RNDRW $(date +%s%N)"
+          sysbench fileio --file-total-size=1G --file-num=4 prepare
+          sysbench fileio --file-total-size=1G --file-num=4 --file-test-mode=rndrw --threads=6 --time=30 run
+          sysbench fileio --file-total-size=1G --file-num=4 cleanup
+          echo "BENCH_DONE_FILEIO_RNDRW $(date +%s%N)"
+      - name: Job Done
+        run: echo "JOB_DONE_SYSBENCH $(date +%s%N)"
