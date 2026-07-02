@@ -297,8 +297,8 @@ jobs:
       - run:
           name: System Info
           command: |
-            echo "=== CPU ==="
-            lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core|Socket|MHz'
+            echo "=== CPU (full lscpu) ==="
+            lscpu
             echo "=== Memory ==="
             free -h
             echo "=== Disk ==="

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - benchmark/machine-large-gen3
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -179,8 +180,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y sysbench
       - name: System Info
         run: |
-          echo "=== CPU ==="
-          lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core|Socket|MHz'
+          echo "=== CPU (full lscpu) ==="
+          lscpu
           echo "=== Memory ==="
           free -h
           echo "=== Disk ==="
