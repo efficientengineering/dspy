@@ -1,11 +1,11 @@
-# Benchmark: machine large.gen2 (4 vCPU, 16 GB, $0.022/min)
+# Benchmark: machine large.gen3 (4 vCPU, 16 GB)
 version: 2.1
 
 jobs:
   fix:
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen2
+    resource_class: large.gen3
     steps:
       - run:
           name: Job Start
@@ -70,7 +70,7 @@ jobs:
         type: string
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen2
+    resource_class: large.gen3
     steps:
       - run:
           name: Job Start
@@ -142,7 +142,7 @@ jobs:
   llm_call_test:
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen2
+    resource_class: large.gen3
     steps:
       - run:
           name: Job Start
@@ -193,7 +193,7 @@ jobs:
             docker run -d --name ollama \
               -p 11434:11434 \
               -v $(pwd)/ollama-data:/root/.ollama \
-              ollama/ollama:latest
+              ollama/ollama:0.21.1
             timeout 60 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
       - run:
           name: Pull LLM
@@ -228,7 +228,7 @@ jobs:
         type: string
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen2
+    resource_class: large.gen3
     steps:
       - run:
           name: Job Start
@@ -286,7 +286,7 @@ jobs:
   sysbench:
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen2
+    resource_class: large.gen3
     steps:
       - run:
           name: Job Start
