@@ -1,0 +1,46 @@
+# Resource-class availability probe: one no-op job per candidate class.
+# Available classes run (echo); unavailable ones are rejected with a message.
+version: 2.1
+
+commands:
+  ok:
+    steps:
+      - run: echo "resource class AVAILABLE"
+
+jobs:
+  d-small:        {docker: [{image: cimg/base:current}], resource_class: small,          steps: [ok]}
+  d-medium:       {docker: [{image: cimg/base:current}], resource_class: medium,         steps: [ok]}
+  d-mediumplus:   {docker: [{image: cimg/base:current}], resource_class: "medium+",      steps: [ok]}
+  d-large:        {docker: [{image: cimg/base:current}], resource_class: large,          steps: [ok]}
+  d-large-gen2:   {docker: [{image: cimg/base:current}], resource_class: large.gen2,     steps: [ok]}
+  d-xlarge:       {docker: [{image: cimg/base:current}], resource_class: xlarge,         steps: [ok]}
+  d-xlarge-gen2:  {docker: [{image: cimg/base:current}], resource_class: xlarge.gen2,    steps: [ok]}
+  d-2xlarge:      {docker: [{image: cimg/base:current}], resource_class: 2xlarge,        steps: [ok]}
+  d-2xlarge-gen2: {docker: [{image: cimg/base:current}], resource_class: 2xlarge.gen2,   steps: [ok]}
+  m-medium:       {machine: {image: ubuntu-2404:current}, resource_class: medium,        steps: [ok]}
+  m-large:        {machine: {image: ubuntu-2404:current}, resource_class: large,         steps: [ok]}
+  m-large-gen2:   {machine: {image: ubuntu-2404:current}, resource_class: large.gen2,    steps: [ok]}
+  m-xlarge:       {machine: {image: ubuntu-2404:current}, resource_class: xlarge,        steps: [ok]}
+  m-2xlarge:      {machine: {image: ubuntu-2404:current}, resource_class: 2xlarge,       steps: [ok]}
+  a-medium:       {machine: {image: ubuntu-2404:current}, resource_class: arm.medium,    steps: [ok]}
+  a-large:        {machine: {image: ubuntu-2404:current}, resource_class: arm.large,     steps: [ok]}
+
+workflows:
+  probe:
+    jobs:
+      - d-small
+      - d-medium
+      - d-mediumplus
+      - d-large
+      - d-large-gen2
+      - d-xlarge
+      - d-xlarge-gen2
+      - d-2xlarge
+      - d-2xlarge-gen2
+      - m-medium
+      - m-large
+      - m-large-gen2
+      - m-xlarge
+      - m-2xlarge
+      - a-medium
+      - a-large
