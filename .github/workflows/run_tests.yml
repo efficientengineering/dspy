@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - benchmark/machine-large-gen3
+      - benchmark/machine-medium-gen3
   pull_request:
     types: [opened, synchronize, reopened]
 

@@ -1,11 +1,11 @@
-# Benchmark: machine large.gen3 (4 vCPU, 16 GB)
+# Benchmark: machine medium.gen3 (2 vCPU / 4 threads, 8 GB) - vCPU-matched to GHA ubuntu-latest
 version: 2.1
 
 jobs:
   fix:
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen3
+    resource_class: medium.gen3
     steps:
       - run:
           name: Job Start
@@ -70,7 +70,7 @@ jobs:
         type: string
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen3
+    resource_class: medium.gen3
     steps:
       - run:
           name: Job Start
@@ -142,7 +142,7 @@ jobs:
   llm_call_test:
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen3
+    resource_class: medium.gen3
     steps:
       - run:
           name: Job Start
@@ -228,7 +228,7 @@ jobs:
         type: string
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen3
+    resource_class: medium.gen3
     steps:
       - run:
           name: Job Start
@@ -286,7 +286,7 @@ jobs:
   sysbench:
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen3
+    resource_class: medium.gen3
     steps:
       - run:
           name: Job Start
