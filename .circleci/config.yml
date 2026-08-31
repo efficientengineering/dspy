@@ -1,0 +1,27 @@
+version: 2.1
+setup: true
+
+# DSPy CI — dynamic config.
+#
+# Setup workflow that continues the pipeline with the run-tests workflow
+# defined in continue_config.yml.
+#
+# To activate this pipeline, set the project's config file path to
+# .circleci/config.yml in CircleCI project settings
+# (Advanced Settings → Config File Path).
+
+orbs:
+  continuation: circleci/continuation@1.0.0
+
+jobs:
+  setup:
+    executor: continuation/default
+    steps:
+      - checkout
+      - continuation/continue:
+          configuration_path: .circleci/continue_config.yml
+
+workflows:
+  setup:
+    jobs:
+      - setup

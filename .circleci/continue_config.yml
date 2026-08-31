@@ -1,0 +1,22 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: Install uv
+          command: pip install uv
+      - run:
+          name: Install dependencies
+          command: uv sync --extra dev --extra test_extras
+      - run:
+          name: Run tests
+          command: uv run pytest tests/ -x -v
+
+workflows:
+  run-tests:
+    jobs:
+      - test
