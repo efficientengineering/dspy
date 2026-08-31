@@ -1,22 +1,28 @@
 version: 2.1
+setup: true
+
+# DSPy CI — dynamic config for run-tests.
+#
+# Translates .github/workflows/run_tests.yml to a CircleCI dynamic config
+# and continues the pipeline.
+#
+# To activate this pipeline, set the project's config file path to
+# .circleci/continue_config.yml in CircleCI project settings
+# (Advanced Settings → Config File Path).
 
 jobs:
-  test:
-    docker:
-      - image: cimg/python:3.12
+  generate-and-continue:
+    machine:
+      image: ubuntu-2204:current
     steps:
       - checkout
       - run:
-          name: Install uv
-          command: pip install uv
-      - run:
-          name: Install dependencies
-          command: uv sync --extra dev --extra test_extras
-      - run:
-          name: Run tests
-          command: uv run pytest tests/ -x -v
+          name: Translate run_tests workflow to CircleCI YAML and continue pipeline
+          command: |
+            circleci run actions translate --dump-config \
+              .github/workflows/run_tests.yml
 
 workflows:
-  run-tests:
+  setup:
     jobs:
-      - test
+      - generate-and-continue
