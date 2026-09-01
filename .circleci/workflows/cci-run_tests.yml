@@ -1,0 +1,19 @@
+version: 2.1
+setup: true
+
+jobs:
+  generate-and-continue:
+    machine:
+      image: ubuntu-2204:current
+    steps:
+      - checkout
+      - run:
+          name: Translate run_tests.yml to CircleCI YAML and continue pipeline
+          command: |
+            circleci run actions translate --dump-config \
+              .github/workflows/run_tests.yml
+
+workflows:
+  setup:
+    jobs:
+      - generate-and-continue
